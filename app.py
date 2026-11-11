@@ -185,11 +185,26 @@ def build_ytdlp_options(job_id: str, job_dir: Path, source: str, mode: str,
                   flush=True)
     if mode == "audio":
         options["format"] = "bestaudio/best"
-        options["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": audio_format,
-            "preferredquality": "0",
-        }]
+        options["writethumbnail"] = True
+        options["postprocessors"] = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": audio_format,
+                "preferredquality": "0",
+            },
+            # Title, artist, album, date, track number
+            {"key": "FFmpegMetadata", "add_metadata": True},
+        ]
+        if audio_format == "flac":
+            # WAV has no standard cover-art slot; FLAC does.
+            options["postprocessors"] += [
+                {"key": "FFmpegThumbnailsConvertor", "format": "jpg"},
+                {"key": "EmbedThumbnail"},
+            ]
+        else:
+            # Keep the cover as a .jpg next to the WAV instead.
+            options["postprocessors"].append(
+                {"key": "FFmpegThumbnailsConvertor", "format": "jpg"})
     else:
         options["format"] = (
             f"bestvideo[height<={max_res}][height>={min_res}]+bestaudio/"
